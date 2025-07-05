@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-gray-200 dark:border-slate-600;
+  }
+  
+  html {
+    @apply transition-colors duration-300;
+  }
+  
+  body {
+    @apply bg-gray-100 dark:bg-slate-900 text-gray-900 dark:text-slate-100 antialiased transition-colors duration-300;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-slate-900 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+  
+  .btn-secondary {
+    @apply bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 text-gray-900 dark:text-slate-100 font-medium py-2.5 px-4 rounded-lg border border-gray-300 dark:border-slate-500 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-slate-900 shadow-md hover:shadow-lg;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-slate-900 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+  
+  .btn-danger {
+    @apply bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white font-medium py-2.5 px-4 rounded-lg transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-100 dark:focus:ring-offset-slate-900 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5;
+  }
+  
+  .input-field {
+    @apply w-full px-3 py-2.5 border border-gray-300 dark:border-slate-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white dark:bg-slate-800 text-gray-900 dark:text-slate-100 shadow-sm placeholder-gray-500 dark:placeholder-slate-400;
+  }
+  
+  .card {
+    @apply bg-white dark:bg-slate-800 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 dark:border-slate-600 p-6 relative overflow-hidden transition-all duration-300;
+  }
+  
+  .section-card {
+    @apply bg-white dark:bg-slate-800 rounded-xl shadow-md border border-gray-200 dark:border-slate-600 p-6 transition-all duration-300 hover:shadow-lg;
+  }
+  
+  .gradient-text {
+    @apply bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400 bg-clip-text text-transparent;
+  }
+  
+  .cyber-grid {
+    background-image: 
+      radial-gradient(circle at 1px 1px, rgba(59, 130, 246, 0.15) 1px, transparent 0);
+    background-size: 20px 20px;
+  }
+  
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+  
+  .status-online {
+    @apply bg-emerald-400 shadow-sm shadow-emerald-400/50;
+  }
+  
+  .status-offline {
+    @apply bg-gray-400 dark:bg-slate-500;
+  }
+  
+  .status-error {
+    @apply bg-red-400 shadow-sm shadow-red-400/50;
+  }
+  
+  .fade-in {
+    animation: fadeIn 0.6s ease-out;
+  }
+  
+  .slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+  
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Dark mode techy blue enhancements */
+@media (prefers-color-scheme: dark) {
+  .dark .cyber-grid {
+    background-image: 
+      radial-gradient(circle at 1px 1px, rgba(59, 130, 246, 0.1) 1px, transparent 0);
+  }
+}
+
+/* ADA Compliance - High contrast mode support */
+@media (prefers-contrast: high) {
+  .btn-primary {
+    @apply bg-blue-700 hover:bg-blue-800 border-2 border-blue-800;
+  }
+  
+  .btn-secondary {
+    @apply border-2 border-gray-600 dark:border-slate-400;
+  }
+  
+  .input-field {
+    @apply border-2 border-gray-400 dark:border-slate-400;
+  }
+  
+  .card {
+    @apply border-2 border-gray-300 dark:border-slate-500;
+  }
+}
+
+/* Focus visible for keyboard navigation */
+.focus-visible:focus {
+  @apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-gray-100 dark:ring-offset-slate-900;
+}
