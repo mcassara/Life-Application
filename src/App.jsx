@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useAuthStore } from './store/authStore'
 import { useThemeStore } from './store/themeStore'
+import { supabase } from './lib/supabase'
 import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
@@ -15,11 +16,24 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 
 function App() {
-  const { user } = useAuthStore()
+  const { user, initialize } = useAuthStore()
   const { initializeTheme } = useThemeStore()
 
   useEffect(() => {
     initializeTheme()
+    initialize()
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          // Handle sign out
+          useAuthStore.getState().logout()
+        }
+      }
+    )
+    
+    return () => subscription.unsubscribe()
   }, [initializeTheme])
 
   if (!user) {

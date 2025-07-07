@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 
 const Layout = ({ children }) => {
-  const { user, logout, isAdmin } = useAuthStore()
+  const { user, logout, isAdmin, banners } = useAuthStore()
   const { isDarkMode, toggleTheme, initializeTheme } = useThemeStore()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -48,8 +48,29 @@ const Layout = ({ children }) => {
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-slate-900 cyber-grid transition-colors duration-300">
+      {/* System Banners */}
+      {banners.length > 0 && (
+        <div className="fixed top-0 left-0 right-0 z-50 space-y-1">
+          {banners.map((banner) => (
+            <div
+              key={banner.id}
+              className={`px-4 py-2 text-center text-sm font-medium ${
+                banner.type === 'info' ? 'bg-blue-600 text-white' :
+                banner.type === 'warning' ? 'bg-yellow-600 text-white' :
+                banner.type === 'success' ? 'bg-green-600 text-white' :
+                'bg-red-600 text-white'
+              }`}
+            >
+              <strong>{banner.title}:</strong> {banner.message}
+            </div>
+          ))}
+        </div>
+      )}
+      
       {/* Top Header Bar */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-gray-200/50 dark:border-slate-600/50 shadow-sm">
+      <div className={`fixed left-0 right-0 z-40 h-16 bg-white/95 dark:bg-slate-800/95 backdrop-blur-md border-b border-gray-200/50 dark:border-slate-600/50 shadow-sm ${
+        banners.length > 0 ? 'top-8' : 'top-0'
+      }`}>
         <div className="flex items-center justify-between h-full px-6">
           {/* Logo Section */}
           <div className="flex items-center space-x-4">

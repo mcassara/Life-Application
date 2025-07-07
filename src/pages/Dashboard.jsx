@@ -1,7 +1,9 @@
 import React from 'react'
+import React, { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import { useAnalysisStore } from '../store/analysisStore'
+import { useClientIntakeStore } from '../store/clientIntakeStore'
 import { 
   Calculator, 
   FileText, 
@@ -28,10 +30,19 @@ import {
 
 const Dashboard = () => {
   const { user } = useAuthStore()
-  const { analyses } = useAnalysisStore()
+  const { analyses, loadAnalyses } = useAnalysisStore()
+  const { intakes, loadIntakes } = useClientIntakeStore()
+  
+  useEffect(() => {
+    if (user) {
+      loadAnalyses()
+      loadIntakes()
+    }
+  }, [user, loadAnalyses, loadIntakes])
 
   // Calculate real stats from actual data
   const totalAnalyses = analyses.length
+  const totalIntakes = intakes.length
   const activeClients = new Set(analyses.map(a => a.clientName)).size
   const totalRevenue = analyses.reduce((sum, analysis) => {
     // Estimate revenue based on coverage gap (simplified calculation)
@@ -53,7 +64,7 @@ const Dashboard = () => {
       value: activeClients.toString(),
       icon: Users,
       color: 'text-green-600 dark:text-green-400',
-      change: activeClients > 0 ? `+${Math.min(2, activeClients)} this month` : 'No clients yet'
+      change: totalIntakes > 0 ? `${totalIntakes} intakes in progress` : 'No clients yet'
     },
     {
       name: 'Revenue Generated',

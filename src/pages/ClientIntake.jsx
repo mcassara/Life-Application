@@ -1,4 +1,8 @@
 import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useClientIntakeStore } from '../store/clientIntakeStore'
+import { useAnalysisStore } from '../store/analysisStore'
+import { useAuthStore } from '../store/authStore'
 import { 
   FileText, 
   Clock,
@@ -9,10 +13,35 @@ import {
   Users,
   Calendar,
   Shield,
-  Database
+  Database,
+  Import,
+  Plus,
+  Eye
 } from 'lucide-react'
 
 const ClientIntake = () => {
+  const { user } = useAuthStore()
+  const { intakes, loadIntakes, importFromAnalysis, isLoading } = useClientIntakeStore()
+  const { analyses, getAnalysesForImport } = useAnalysisStore()
+  const [showImportModal, setShowImportModal] = useState(false)
+  
+  useEffect(() => {
+    if (user) {
+      loadIntakes()
+    }
+  }, [user, loadIntakes])
+  
+  const availableAnalyses = getAnalysesForImport()
+  
+  const handleImport = async (analysisId) => {
+    try {
+      await importFromAnalysis(analysisId)
+      setShowImportModal(false)
+    } catch (error) {
+      console.error('Import failed:', error)
+    }
+  }
+
   const features = [
     {
       icon: FileText,
@@ -84,6 +113,26 @@ const ClientIntake = () => {
       {/* Coming Soon Card */}
       <div className="section-card bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-blue-500/30 text-center">
         <div className="max-w-2xl mx-auto">
+          {/* Import from Needs Analysis */}
+          {availableAnalyses.length > 0 && (
+            <div className="mb-8 p-6 bg-white/50 dark:bg-slate-800/50 rounded-lg border border-blue-200 dark:border-blue-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center justify-center">
+                <Import className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-2" />
+                Import from Needs Analysis
+              </h3>
+              <p className="text-gray-600 dark:text-slate-400 mb-4">
+                Start a client intake with data from an existing needs analysis
+              </p>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="btn-primary flex items-center mx-auto"
+              >
+                <Import className="h-4 w-4 mr-2" />
+                Import Client Data
+              </button>
+            </div>
+          )}
+          
           <div className="relative mb-6">
             <Sparkles className="h-12 w-12 text-blue-400 mx-auto" />
             <div className="absolute inset-0 bg-blue-400/20 blur-xl rounded-full"></div>
@@ -195,6 +244,107 @@ const ClientIntake = () => {
         </div>
       </div>
     </div>
+      {/* Current Intakes */}
+      {intakes.length > 0 && (
+        <div className="section-card">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-slate-100 mb-4 flex items-center">
+            <FileText className="h-5 w-5 text-green-600 dark:text-green-400 mr-2" />
+            Current Client Intakes
+          </h2>
+          <div className="space-y-4">
+            {intakes.slice(0, 5).map((intake) => (
+              <div key={intake.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-slate-100">
+                      {intake.client_name}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
+                      {intake.completion_percentage}% complete • {intake.status.replace('_', ' ')}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-16 bg-gray-200 dark:bg-slate-600 rounded-full h-2">
+                    <div 
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${intake.completion_percentage}%` }}
+                    ></div>
+                  </div>
+                  <span className="text-sm text-gray-500 dark:text-slate-400">
+                    {new Date(intake.created_at).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200 dark:border-slate-600">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                  Import from Needs Analysis
+                </h3>
+                <button
+                  onClick={() => setShowImportModal(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <p className="text-gray-600 dark:text-slate-400 mb-6">
+                Select a completed needs analysis to import client data and start the intake process.
+              </p>
+              
+              <div className="space-y-3">
+                {availableAnalyses.map((analysis) => (
+                  <div key={analysis.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600 hover:border-blue-300 dark:hover:border-blue-500 transition-colors">
+                    <div className="flex items-center">
+                      <Calculator className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-slate-100">
+                          {analysis.client_name}
+                        </p>
+                        <p className="text-sm text-gray-600 dark:text-slate-400">
+                          Coverage Gap: ${analysis.coverage_gap?.toLocaleString() || '0'} • 
+                          {new Date(analysis.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleImport(analysis.id)}
+                      disabled={isLoading}
+                      className="btn-primary flex items-center disabled:opacity-50"
+                    >
+                      <Import className="h-4 w-4 mr-2" />
+                      Import
+                    </button>
+                  </div>
+                ))}
+              </div>
+              
+              {availableAnalyses.length === 0 && (
+                <div className="text-center py-8">
+                  <Calculator className="h-12 w-12 text-gray-400 dark:text-slate-500 mx-auto mb-4" />
+                  <p className="text-gray-500 dark:text-slate-400">
+                    No completed needs analyses available for import.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
   )
 }
 
