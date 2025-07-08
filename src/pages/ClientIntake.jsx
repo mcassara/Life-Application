@@ -346,7 +346,6 @@ const ClientIntake = () => {
           </div>
         )}
       </div>
-    </div>
   )
 }
 
