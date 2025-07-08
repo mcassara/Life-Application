@@ -1,4 +1,3 @@
-import React from 'react'
 import React, { useState, useEffect } from 'react'
 import { useClientIntakeStore } from '../store/clientIntakeStore'
 import { useAnalysisStore } from '../store/analysisStore'
@@ -16,7 +15,9 @@ import {
   Database,
   Import,
   Plus,
-  Eye
+  Eye,
+  X,
+  Calculator
 } from 'lucide-react'
 
 const ClientIntake = () => {
