@@ -44,7 +44,11 @@ export const db = {
   async updateUserProfile(userId, updates) {
     const { data, error } = await supabase
       .from('user_profiles')
-      .update(updates)
+      .upsert({
+        id: userId,
+        ...updates,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', userId)
       .select()
       .single()

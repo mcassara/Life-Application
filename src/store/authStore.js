@@ -60,12 +60,16 @@ export const useAuthStore = create(
       register: async (name, email, password) => {
         set({ isLoading: true })
         try {
+          // Determine role based on email domain
+          const role = email.endsWith('@legacywealthco.com') ? 'admin' : 'agent'
+          
           const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
               data: {
-                name: name
+                name: name,
+                role: role
               }
             }
           })
@@ -78,7 +82,15 @@ export const useAuthStore = create(
             return { success: true, emailConfirmation: true }
           }
           
-          const profile = await db.getUserProfile(data.user.id)
+          // Create or get profile with correct role
+          let profile = await db.getUserProfile(data.user.id)
+          if (!profile) {
+            profile = await db.updateUserProfile(data.user.id, {
+              name: name,
+              role: role
+            })
+          }
+          
           set({ 
             user: profile, 
             session: data.session,
