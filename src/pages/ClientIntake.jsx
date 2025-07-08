@@ -244,7 +244,7 @@ const ClientIntake = () => {
           </div>
         </div>
       </div>
-    </div>
+
       {/* Current Intakes */}
       {intakes.length > 0 && (
         <div className="section-card">
@@ -345,7 +345,7 @@ const ClientIntake = () => {
           </div>
         </div>
       )}
-
+    </div>
   )
 }
 
