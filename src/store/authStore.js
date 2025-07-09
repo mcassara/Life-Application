@@ -17,7 +17,19 @@ export const useAuthStore = create(
         try {
           const { data: { session } } = await supabase.auth.getSession()
           if (session) {
-            const profile = await db.getUserProfile(session.user.id)
+            let profile = await db.getUserProfile(session.user.id)
+            
+            // If profile doesn't exist, create it
+            if (!profile) {
+              const userData = session.user.user_metadata || {}
+              const role = session.user.email?.endsWith('@legacywealthco.com') ? 'admin' : 'agent'
+              
+              profile = await db.updateUserProfile(session.user.id, {
+                full_name: userData.name || userData.full_name || '',
+                role: userData.role || role
+              })
+            }
+            
             set({ 
               user: profile, 
               session,
@@ -43,7 +55,19 @@ export const useAuthStore = create(
           
           if (error) throw error
           
-          const profile = await db.getUserProfile(data.user.id)
+          let profile = await db.getUserProfile(data.user.id)
+          
+          // If profile doesn't exist, create it
+          if (!profile) {
+            const userData = data.user.user_metadata || {}
+            const role = email.endsWith('@legacywealthco.com') ? 'admin' : 'agent'
+            
+            profile = await db.updateUserProfile(data.user.id, {
+              full_name: userData.name || userData.full_name || '',
+              role: userData.role || role
+            })
+          }
+          
           set({ 
             user: profile, 
             session: data.session,
