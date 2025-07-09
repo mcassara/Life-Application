@@ -185,9 +185,15 @@ export const db = {
   // Import from Needs Analysis to Client Intake
   async importFromNeedsAnalysis(needsAnalysisId, userId) {
     const { data: analysis, error } = await supabase
-    // Create client with data from needs analysis
       .from('needs_analyses')
+      .select('*')
+      .eq('id', needsAnalysisId)
+      .single()
     
+    if (error) throw error
+
+    const intakeData = {
+      personal_info: {
         name: analysis.title || 'Client',
         age: analysis.metadata?.age,
         gender: analysis.metadata?.gender,
