@@ -149,7 +149,28 @@ export const useClientIntakeStore = create(
       // Get intake by ID
       getIntakeById: (id) => {
         const state = get()
-        return state.intakes.find(intake => intake.id === id)
+        const client = state.intakes.find(intake => intake.id === id)
+        if (!client) return null
+        
+        // Transform client data back to intake format
+        let intakeData = {}
+        try {
+          intakeData = client.notes ? JSON.parse(client.notes) : {}
+        } catch (e) {
+          intakeData = {}
+        }
+        
+        return {
+          ...client,
+          client_name: `${client.first_name} ${client.last_name}`.trim(),
+          client_email: client.email,
+          client_phone: client.phone,
+          personal_info: intakeData.personal_info || {},
+          financial_info: intakeData.financial_info || {},
+          family_info: intakeData.family_info || {},
+          insurance_info: intakeData.insurance_info || {},
+          completion_percentage: intakeData.completion_percentage || 0
+        }
       }
     }),
     {

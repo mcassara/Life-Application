@@ -104,13 +104,13 @@ export const db = {
     if (error) throw error
   },
 
-  // Client Intakes
+  // Client Intakes (using clients table)
   async getClientIntakes(userId) {
     const { data, error } = await supabase
-      .from('client_intakes')
+      .from('clients')
       .select(`
         *,
-        needs_analysis:needs_analyses(id, client_name, total_needs, coverage_gap)
+        needs_analyses(id, title, recommended_coverage, priority_score, status)
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -120,12 +120,25 @@ export const db = {
   },
 
   async createClientIntake(userId, intakeData) {
+    // Map intake data to client table structure
+    const clientData = {
+      first_name: intakeData.personal_info?.name?.split(' ')[0] || intakeData.client_name?.split(' ')[0] || '',
+      last_name: intakeData.personal_info?.name?.split(' ').slice(1).join(' ') || intakeData.client_name?.split(' ').slice(1).join(' ') || '',
+      email: intakeData.client_email || intakeData.personal_info?.email || '',
+      phone: intakeData.client_phone || intakeData.personal_info?.phone || '',
+      notes: JSON.stringify({
+        personal_info: intakeData.personal_info || {},
+        financial_info: intakeData.financial_info || {},
+        family_info: intakeData.family_info || {},
+        insurance_info: intakeData.insurance_info || {},
+        completion_percentage: intakeData.completion_percentage || 0
+      }),
+      status: 'prospect'
+    }
+
     const { data, error } = await supabase
-      .from('client_intakes')
-      .insert({
-        user_id: userId,
-        ...intakeData
-      })
+      .from('clients')
+      .insert({ user_id: userId, ...clientData })
       .select()
       .single()
     
@@ -134,9 +147,24 @@ export const db = {
   },
 
   async updateClientIntake(id, updates) {
+    // Map updates to client table structure
+    const clientUpdates = {
+      first_name: updates.personal_info?.name?.split(' ')[0] || updates.first_name,
+      last_name: updates.personal_info?.name?.split(' ').slice(1).join(' ') || updates.last_name,
+      email: updates.client_email || updates.email,
+      phone: updates.client_phone || updates.phone,
+      notes: updates.notes ? updates.notes : JSON.stringify({
+        personal_info: updates.personal_info || {},
+        financial_info: updates.financial_info || {},
+        family_info: updates.family_info || {},
+        insurance_info: updates.insurance_info || {},
+        completion_percentage: updates.completion_percentage || 0
+      })
+    }
+
     const { data, error } = await supabase
-      .from('client_intakes')
-      .update(updates)
+      .from('clients')
+      .update(clientUpdates)
       .eq('id', id)
       .select()
       .single()
@@ -147,7 +175,7 @@ export const db = {
 
   async deleteClientIntake(id) {
     const { error } = await supabase
-      .from('client_intakes')
+      .from('clients')
       .delete()
       .eq('id', id)
     
@@ -157,44 +185,32 @@ export const db = {
   // Import from Needs Analysis to Client Intake
   async importFromNeedsAnalysis(needsAnalysisId, userId) {
     const { data: analysis, error } = await supabase
+    // Create client with data from needs analysis
       .from('needs_analyses')
-      .select('*')
-      .eq('id', needsAnalysisId)
-      .eq('user_id', userId)
-      .single()
     
-    if (error) throw error
-    
-    // Create client intake with data from needs analysis
-    const intakeData = {
-      needs_analysis_id: analysis.id,
-      client_name: analysis.client_name,
-      client_email: analysis.client_data?.email || '',
-      client_phone: analysis.client_data?.phone || '',
-      personal_info: {
-        name: analysis.client_name,
-        age: analysis.client_data?.age,
-        gender: analysis.client_data?.gender,
-        maritalStatus: analysis.client_data?.maritalStatus,
-        occupation: analysis.client_data?.occupation,
-        healthStatus: analysis.client_data?.healthStatus
+        name: analysis.title || 'Client',
+        age: analysis.metadata?.age,
+        gender: analysis.metadata?.gender,
+        maritalStatus: analysis.marital_status,
+        occupation: analysis.metadata?.occupation,
+        healthStatus: analysis.metadata?.healthStatus
       },
       financial_info: {
-        annualIncome: analysis.client_data?.annualIncome,
-        currentSavings: analysis.client_data?.currentSavings,
-        monthlyExpenses: analysis.client_data?.monthlyExpenses,
-        existingLifeInsurance: analysis.client_data?.existingLifeInsurance
+        annualIncome: analysis.annual_income,
+        currentSavings: analysis.current_savings,
+        monthlyExpenses: analysis.monthly_expenses,
+        existingLifeInsurance: analysis.current_life_insurance
       },
       family_info: {
-        numberOfChildren: analysis.client_data?.numberOfChildren,
-        childrenAges: analysis.client_data?.childrenAges,
-        spouseAge: analysis.client_data?.spouseAge,
-        spouseIncome: analysis.client_data?.spouseIncome
+        numberOfChildren: analysis.number_of_dependents,
+        childrenAges: analysis.children_ages,
+        spouseAge: analysis.metadata?.spouseAge,
+        spouseIncome: analysis.spouse_income
       },
       insurance_info: {
-        currentLifeInsurance: analysis.client_data?.existingLifeInsurance,
-        currentHealthInsurance: analysis.client_data?.currentHealthInsurance,
-        employerBenefits: analysis.client_data?.employerBenefits
+        currentLifeInsurance: analysis.current_life_insurance,
+        currentHealthInsurance: analysis.metadata?.currentHealthInsurance,
+        employerBenefits: analysis.employer_benefits
       },
       completion_percentage: 75 // Pre-filled from analysis
     }
