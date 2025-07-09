@@ -202,6 +202,102 @@ export const db = {
     return this.createClientIntake(userId, intakeData)
   },
 
+  // Client Documents
+  async getClientDocuments(userId, clientId = null) {
+    let query = supabase
+      .from('client_documents')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    
+    if (clientId) {
+      query = query.eq('client_id', clientId)
+    }
+    
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  },
+
+  async uploadClientDocument(userId, clientId, documentData) {
+    const { data, error } = await supabase
+      .from('client_documents')
+      .insert({
+        user_id: userId,
+        client_id: clientId,
+        ...documentData
+      })
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  // Client Communications
+  async getClientCommunications(userId, clientId = null) {
+    let query = supabase
+      .from('client_communications')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    
+    if (clientId) {
+      query = query.eq('client_id', clientId)
+    }
+    
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  },
+
+  async createCommunication(userId, clientId, communicationData) {
+    const { data, error } = await supabase
+      .from('client_communications')
+      .insert({
+        user_id: userId,
+        client_id: clientId,
+        ...communicationData
+      })
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  // Analysis Templates
+  async getAnalysisTemplates(userId, includePublic = true) {
+    let query = supabase
+      .from('analysis_templates')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (includePublic) {
+      query = query.or(`user_id.eq.${userId},is_public.eq.true`)
+    } else {
+      query = query.eq('user_id', userId)
+    }
+    
+    const { data, error } = await query
+    if (error) throw error
+    return data || []
+  },
+
+  async createAnalysisTemplate(userId, templateData) {
+    const { data, error } = await supabase
+      .from('analysis_templates')
+      .insert({
+        user_id: userId,
+        ...templateData
+      })
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
   // System Banners
   async getActiveBanners() {
     const { data, error } = await supabase
@@ -254,6 +350,53 @@ export const db = {
     const { error } = await supabase
       .from('user_notifications')
       .update({ read: true })
+      .eq('id', id)
+    
+    if (error) throw error
+  },
+
+  // Enhanced client operations
+  async getClients(userId) {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data || []
+  },
+
+  async createClient(userId, clientData) {
+    const { data, error } = await supabase
+      .from('clients')
+      .insert({
+        user_id: userId,
+        ...clientData
+      })
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async updateClient(id, updates) {
+    const { data, error } = await supabase
+      .from('clients')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  },
+
+  async deleteClient(id) {
+    const { error } = await supabase
+      .from('clients')
+      .delete()
       .eq('id', id)
     
     if (error) throw error
