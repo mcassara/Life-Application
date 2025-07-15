@@ -43,7 +43,11 @@ const Register = () => {
     try {
       const result = await register(formData.name, formData.email, formData.password)
       if (result.success) {
-        toast.success('Account created successfully!')
+        if (result.emailConfirmation) {
+          toast.success('Account created! Please check your email to confirm your account before signing in.')
+        } else {
+          toast.success('Account created successfully! Welcome to LifeGuard Pro!')
+        }
       }
     } catch (error) {
       toast.error('Registration failed. Please try again.')
