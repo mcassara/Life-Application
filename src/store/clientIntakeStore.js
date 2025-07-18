@@ -8,176 +8,207 @@ export const useClientIntakeStore = create(
   persist(
     (set, get) => ({
       intakes: [],
-      currentIntake: null,
       isLoading: false,
-
-      // Load client intakes from database
+      error: null,
+      
+      // Load client intakes for current user
       loadIntakes: async () => {
         const { user } = useAuthStore.getState()
-        if (!user) return
-        
-        set({ isLoading: true })
+        if (!user) {
+          set({ intakes: [], error: null, isLoading: false })
+          return
+        }
+
+        set({ isLoading: true, error: null })
         try {
-          const intakes = await db.getClientIntakes(user.id)
-          set({ intakes, isLoading: false })
+          const data = await db.getClientIntakes(user.id)
+          // Transform client data to intake format for compatibility
+          const transformedIntakes = Array.isArray(data) ? data.map(client => ({
+            id: client.id,
+            client_name: `${client.first_name || ''} ${client.last_name || ''}`.trim() || 'Unnamed Client',
+            client_email: client.email || '',
+            client_phone: client.phone || '',
+            status: client.status || 'prospect',
+            completion_percentage: 0,
+            personal_info: {},
+            financial_info: {},
+            family_info: {},
+            insurance_info: {},
+            createdAt: client.created_at,
+            updatedAt: client.updated_at,
+            // Parse notes if it contains JSON data
+            ...(client.notes ? (() => {
+              try {
+                const parsed = JSON.parse(client.notes)
+                return {
+                  completion_percentage: parsed.completion_percentage || 0,
+                  personal_info: parsed.personal_info || {},
+                  financial_info: parsed.financial_info || {},
+                  family_info: parsed.family_info || {},
+                  insurance_info: parsed.insurance_info || {}
+                }
+              } catch {
+                return {}
+              }
+            })() : {})
+          })) : []
+          
+          set({ 
+            intakes: transformedIntakes, 
+            isLoading: false,
+            error: null 
+          })
         } catch (error) {
-          console.error('Load intakes error:', error)
-          set({ isLoading: false })
-          toast.error('Failed to load client intakes')
+          console.error('Failed to load client intakes:', error)
+          set({ 
+            intakes: [], 
+            isLoading: false,
+            error: error.message || 'Failed to load client intakes'
+          })
         }
       },
-
-      // Create new client intake
+      
+      // Create new intake
       createIntake: async (intakeData) => {
         const { user } = useAuthStore.getState()
-        if (!user) return
-        
+        if (!user) throw new Error('User not authenticated')
+
         set({ isLoading: true })
         try {
-          const intake = await db.createClientIntake(user.id, intakeData)
-          set((state) => ({
-            intakes: [intake, ...state.intakes],
-            currentIntake: intake,
-            isLoading: false
+          const newIntake = await db.createClientIntake(user.id, intakeData)
+          // Transform to intake format
+          const transformedIntake = {
+            id: newIntake.id,
+            client_name: `${newIntake.first_name || ''} ${newIntake.last_name || ''}`.trim(),
+            client_email: newIntake.email || '',
+            client_phone: newIntake.phone || '',
+            status: newIntake.status || 'prospect',
+            completion_percentage: intakeData.completion_percentage || 0,
+            personal_info: intakeData.personal_info || {},
+            financial_info: intakeData.financial_info || {},
+            family_info: intakeData.family_info || {},
+            insurance_info: intakeData.insurance_info || {},
+            createdAt: newIntake.created_at,
+            updatedAt: newIntake.updated_at
+          }
+          
+          set(state => ({ 
+            intakes: [transformedIntake, ...state.intakes],
+            isLoading: false 
           }))
           toast.success('Client intake created successfully')
-          return intake
+          return transformedIntake
         } catch (error) {
-          console.error('Create intake error:', error)
           set({ isLoading: false })
           toast.error('Failed to create client intake')
           throw error
         }
       },
-
-      // Update client intake
+      
+      // Update existing intake
       updateIntake: async (id, updates) => {
         set({ isLoading: true })
         try {
-          const intake = await db.updateClientIntake(id, updates)
-          set((state) => ({
-            intakes: state.intakes.map(i => i.id === id ? intake : i),
-            currentIntake: state.currentIntake?.id === id ? intake : state.currentIntake,
+          const updatedIntake = await db.updateClientIntake(id, updates)
+          // Transform to intake format
+          const transformedIntake = {
+            id: updatedIntake.id,
+            client_name: `${updatedIntake.first_name || ''} ${updatedIntake.last_name || ''}`.trim(),
+            client_email: updatedIntake.email || '',
+            client_phone: updatedIntake.phone || '',
+            status: updatedIntake.status || 'prospect',
+            completion_percentage: updates.completion_percentage || 0,
+            personal_info: updates.personal_info || {},
+            financial_info: updates.financial_info || {},
+            family_info: updates.family_info || {},
+            insurance_info: updates.insurance_info || {},
+            createdAt: updatedIntake.created_at,
+            updatedAt: updatedIntake.updated_at
+          }
+          
+          set(state => ({
+            intakes: state.intakes.map(intake => 
+              intake.id === id ? transformedIntake : intake
+            ),
             isLoading: false
           }))
           toast.success('Client intake updated successfully')
-          return intake
+          return transformedIntake
         } catch (error) {
-          console.error('Update intake error:', error)
           set({ isLoading: false })
           toast.error('Failed to update client intake')
           throw error
         }
       },
-
-      // Delete client intake
+      
+      // Delete intake
       deleteIntake: async (id) => {
         set({ isLoading: true })
         try {
           await db.deleteClientIntake(id)
-          set((state) => ({
-            intakes: state.intakes.filter(i => i.id !== id),
-            currentIntake: state.currentIntake?.id === id ? null : state.currentIntake,
+          set(state => ({
+            intakes: state.intakes.filter(intake => intake.id !== id),
             isLoading: false
           }))
           toast.success('Client intake deleted successfully')
         } catch (error) {
-          console.error('Delete intake error:', error)
           set({ isLoading: false })
           toast.error('Failed to delete client intake')
-        }
-      },
-
-      // Import from needs analysis
-      importFromAnalysis: async (needsAnalysisId) => {
-        const { user } = useAuthStore.getState()
-        if (!user) return
-        
-        set({ isLoading: true })
-        try {
-          const intake = await db.importFromNeedsAnalysis(needsAnalysisId, user.id)
-          set((state) => ({
-            intakes: [intake, ...state.intakes],
-            currentIntake: intake,
-            isLoading: false
-          }))
-          toast.success('Client data imported successfully from needs analysis')
-          return intake
-        } catch (error) {
-          console.error('Import from analysis error:', error)
-          set({ isLoading: false })
-          toast.error('Failed to import from needs analysis')
           throw error
         }
       },
-
-      // Set current intake
-      setCurrentIntake: (intake) => {
-        set({ currentIntake: intake })
-      },
-
-      // Clear current intake
-      clearCurrentIntake: () => {
-        set({ currentIntake: null })
-      },
-
-      // Calculate completion percentage
-      calculateCompletion: (intakeData) => {
-        const sections = [
-          intakeData.personal_info,
-          intakeData.financial_info,
-          intakeData.family_info,
-          intakeData.insurance_info
-        ]
-        
-        let totalFields = 0
-        let filledFields = 0
-        
-        sections.forEach(section => {
-          if (section && typeof section === 'object') {
-            const fields = Object.values(section)
-            totalFields += fields.length
-            filledFields += fields.filter(value => 
-              value !== null && value !== undefined && value !== ''
-            ).length
-          }
-        })
-        
-        return totalFields > 0 ? Math.round((filledFields / totalFields) * 100) : 0
-      },
-
+      
       // Get intake by ID
       getIntakeById: (id) => {
-        const state = get()
-        const client = state.intakes.find(intake => intake.id === id)
-        if (!client) return null
-        
-        // Transform client data back to intake format
-        let intakeData = {}
+        const { intakes } = get()
+        return intakes.find(intake => intake.id === id)
+      },
+      
+      // Import from needs analysis
+      importFromAnalysis: async (analysisId) => {
+        const { user } = useAuthStore.getState()
+        if (!user) throw new Error('User not authenticated')
+
+        set({ isLoading: true })
         try {
-          intakeData = client.notes ? JSON.parse(client.notes) : {}
-        } catch (e) {
-          intakeData = {}
+          const newIntake = await db.importFromNeedsAnalysis(analysisId, user.id)
+          const transformedIntake = {
+            id: newIntake.id,
+            client_name: `${newIntake.first_name || ''} ${newIntake.last_name || ''}`.trim(),
+            client_email: newIntake.email || '',
+            client_phone: newIntake.phone || '',
+            status: newIntake.status || 'prospect',
+            completion_percentage: 75, // Pre-filled from analysis
+            personal_info: {},
+            financial_info: {},
+            family_info: {},
+            insurance_info: {},
+            createdAt: newIntake.created_at,
+            updatedAt: newIntake.updated_at
+          }
+          
+          set(state => ({ 
+            intakes: [transformedIntake, ...state.intakes],
+            isLoading: false 
+          }))
+          toast.success('Client imported from analysis successfully')
+          return transformedIntake
+        } catch (error) {
+          set({ isLoading: false })
+          toast.error('Failed to import from analysis')
+          throw error
         }
-        
-        return {
-          ...client,
-          client_name: `${client.first_name} ${client.last_name}`.trim(),
-          client_email: client.email,
-          client_phone: client.phone,
-          personal_info: intakeData.personal_info || {},
-          financial_info: intakeData.financial_info || {},
-          family_info: intakeData.family_info || {},
-          insurance_info: intakeData.insurance_info || {},
-          completion_percentage: intakeData.completion_percentage || 0
-        }
+      },
+      
+      // Clear all intakes (for logout)
+      clearIntakes: () => {
+        set({ intakes: [], error: null, isLoading: false })
       }
     }),
     {
       name: 'client-intake-storage',
-      partialize: (state) => ({
-        // Don't persist intakes since they come from database
-        currentIntake: state.currentIntake
+      partialize: (state) => ({ 
+        intakes: state.intakes 
       })
     }
   )

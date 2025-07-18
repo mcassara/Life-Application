@@ -24,13 +24,14 @@ import {
   Calendar,
   Target,
   DollarSign,
-  Briefcase
+  Briefcase,
+  AlertCircle
 } from 'lucide-react'
 
 const Dashboard = () => {
   const { user } = useAuthStore()
-  const { analyses, loadAnalyses } = useAnalysisStore()
-  const { intakes, loadIntakes } = useClientIntakeStore()
+  const { analyses, loadAnalyses, isLoading: analysesLoading, error: analysesError } = useAnalysisStore()
+  const { intakes, loadIntakes, isLoading: intakesLoading, error: intakesError } = useClientIntakeStore()
   
   useEffect(() => {
     if (user) {
@@ -42,12 +43,18 @@ const Dashboard = () => {
   // Calculate real stats from actual data
   const totalAnalyses = analyses.length
   const totalIntakes = intakes.length
-  const activeClients = new Set(analyses.map(a => a.clientName)).size
+  const activeClients = new Set([
+    ...analyses.map(a => a.client_name || a.clientName).filter(Boolean),
+    ...intakes.map(i => i.client_name).filter(Boolean)
+  ]).size
+  
   const totalRevenue = analyses.reduce((sum, analysis) => {
     // Estimate revenue based on coverage gap (simplified calculation)
-    const estimatedCommission = (analysis.coverageGap || 0) * 0.02 // 2% commission estimate
+    const coverageGap = analysis.coverage_gap || analysis.coverageGap || 0
+    const estimatedCommission = coverageGap * 0.02 // 2% commission estimate
     return sum + estimatedCommission
   }, 0)
+  
   const conversionRate = totalAnalyses > 0 ? ((activeClients / totalAnalyses) * 100) : 0
 
   const userStats = [
@@ -56,28 +63,34 @@ const Dashboard = () => {
       value: totalAnalyses.toString(),
       icon: Calculator,
       color: 'text-blue-600 dark:text-blue-400',
-      change: totalAnalyses > 0 ? `+${Math.min(3, totalAnalyses)} this week` : 'No analyses yet'
+      change: totalAnalyses > 0 ? `+${Math.min(3, totalAnalyses)} this week` : 'No analyses yet',
+      loading: analysesLoading,
+      error: analysesError
     },
     {
       name: 'Active Clients',
       value: activeClients.toString(),
       icon: Users,
       color: 'text-green-600 dark:text-green-400',
-      change: totalIntakes > 0 ? `${totalIntakes} intakes in progress` : 'No clients yet'
+      change: totalIntakes > 0 ? `${totalIntakes} intakes in progress` : 'No clients yet',
+      loading: intakesLoading,
+      error: intakesError
     },
     {
       name: 'Revenue Generated',
       value: totalRevenue > 0 ? `$${totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : '$0',
       icon: DollarSign,
       color: 'text-purple-600 dark:text-purple-400',
-      change: totalRevenue > 0 ? '+12% this quarter' : 'No revenue yet'
+      change: totalRevenue > 0 ? '+12% this quarter' : 'No revenue yet',
+      loading: analysesLoading
     },
     {
       name: 'Conversion Rate',
       value: `${conversionRate.toFixed(0)}%`,
       icon: Target,
       color: 'text-orange-600 dark:text-orange-400',
-      change: conversionRate > 0 ? '+5% improvement' : 'No conversions yet'
+      change: conversionRate > 0 ? '+5% improvement' : 'No conversions yet',
+      loading: analysesLoading || intakesLoading
     }
   ]
 
@@ -111,12 +124,12 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section - Clean without system status */}
+      {/* Welcome Section */}
       <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-600 p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-100">
-              Welcome back, {user?.name}!
+              Welcome back, {user?.name || user?.full_name}!
             </h1>
             <p className="text-gray-600 dark:text-slate-400 mt-2">
               Ready to help your clients secure their financial future? Let's get started.
@@ -144,14 +157,29 @@ const Dashboard = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-600 dark:text-slate-400">{stat.name}</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-slate-100 mt-1">{stat.value}</p>
-                  <p className={`text-xs mt-1 ${
-                    stat.value === '0' || stat.value === '$0' || stat.value === '0%' 
-                      ? 'text-gray-500 dark:text-slate-500' 
-                      : 'text-green-600 dark:text-green-400'
-                  }`}>
-                    {stat.change}
-                  </p>
+                  
+                  {stat.loading ? (
+                    <div className="flex items-center mt-1">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      <span className="ml-2 text-sm text-gray-500 dark:text-slate-400">Loading...</span>
+                    </div>
+                  ) : stat.error ? (
+                    <div className="flex items-center mt-1">
+                      <AlertCircle className="h-4 w-4 text-red-500 mr-1" />
+                      <span className="text-sm text-red-600 dark:text-red-400">Error loading data</span>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-2xl font-bold text-gray-900 dark:text-slate-100 mt-1">{stat.value}</p>
+                      <p className={`text-xs mt-1 ${
+                        stat.value === '0' || stat.value === '$0' || stat.value === '0%' 
+                          ? 'text-gray-500 dark:text-slate-500' 
+                          : 'text-green-600 dark:text-green-400'
+                      }`}>
+                        {stat.change}
+                      </p>
+                    </>
+                  )}
                 </div>
                 <div className="flex-shrink-0">
                   <Icon className={`h-8 w-8 ${stat.color}`} />
@@ -223,23 +251,68 @@ const Dashboard = () => {
           Recent Activity
         </h2>
         
-        {analyses.length > 0 ? (
+        {analysesLoading || intakesLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <span className="ml-3 text-gray-600 dark:text-slate-400">Loading recent activity...</span>
+          </div>
+        ) : analysesError || intakesError ? (
+          <div className="text-center py-12">
+            <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100 mb-2">
+              Unable to Load Activity
+            </h3>
+            <p className="text-gray-500 dark:text-slate-400 mb-6">
+              There was an error loading your recent activity. Please try refreshing the page.
+            </p>
+            <button
+              onClick={() => {
+                loadAnalyses()
+                loadIntakes()
+              }}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        ) : analyses.length > 0 || intakes.length > 0 ? (
           <div className="space-y-4">
-            {analyses.slice(0, 5).map((analysis) => (
-              <div key={analysis.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600">
+            {/* Show recent analyses */}
+            {analyses.slice(0, 3).map((analysis) => (
+              <div key={`analysis-${analysis.id}`} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600">
                 <div className="flex items-center">
                   <Calculator className="h-5 w-5 text-blue-600 dark:text-blue-400 mr-3" />
                   <div>
                     <p className="font-medium text-gray-900 dark:text-slate-100">
-                      Analysis for {analysis.clientName}
+                      Analysis for {analysis.client_name || analysis.clientName || 'Client'}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-slate-400">
-                      Coverage Gap: ${analysis.coverageGap?.toLocaleString() || '0'}
+                      Coverage Gap: ${(analysis.coverage_gap || analysis.coverageGap || 0).toLocaleString()}
                     </p>
                   </div>
                 </div>
                 <div className="text-sm text-gray-500 dark:text-slate-400">
-                  {new Date(analysis.createdAt).toLocaleDateString()}
+                  {new Date(analysis.created_at || analysis.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+            ))}
+            
+            {/* Show recent intakes */}
+            {intakes.slice(0, 2).map((intake) => (
+              <div key={`intake-${intake.id}`} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600">
+                <div className="flex items-center">
+                  <FileText className="h-5 w-5 text-green-600 dark:text-green-400 mr-3" />
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-slate-100">
+                      Client Intake: {intake.client_name || 'Unnamed Client'}
+                    </p>
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
+                      Progress: {intake.completion_percentage || 0}% complete
+                    </p>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500 dark:text-slate-400">
+                  {new Date(intake.createdAt || intake.created_at).toLocaleDateString()}
                 </div>
               </div>
             ))}

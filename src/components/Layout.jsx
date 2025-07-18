@@ -132,8 +132,8 @@ const Layout = ({ children }) => {
 
       {/* Floating Powered By Tag */}
       <div className="fixed bottom-4 right-4 z-40">
-        <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-gray-200/50 dark:border-slate-600/50">
-          <span className="text-xs text-gray-500 dark:text-slate-400">
+        <div className="bg-gradient-to-r from-blue-600/20 to-indigo-600/20 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-blue-500/30 shadow-blue-500/20">
+          <span className="text-xs text-blue-600 dark:text-blue-300 font-medium">
             Powered by Legacy AI Tools
           </span>
         </div>
